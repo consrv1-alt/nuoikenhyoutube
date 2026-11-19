@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YT Growth Studio AI - Quản Lý & Kiếm Tiền YouTube</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-rose-500/30 selection:text-rose-200 overflow-x-hidden">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
+    <!-- Modal Cấu Hình Kênh & Đồng Bộ YouTube API -->
+    <div id="channel-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-brands fa-youtube text-rose-500"></i> Liên Kết & Cài Đặt Kênh YouTube
+                </h3>
+                <button type="button" onclick="closeChannelModal()" class="text-slate-400 hover:text-white p-2 rounded-lg transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Khu vực Đồng Bộ Tự Động qua YouTube Data API v3 -->
+            <div class="mb-5 p-4 rounded-xl bg-gradient-to-br from-rose-950/40 to-slate-950 border border-rose-500/30 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-rotate text-rose-400"></i> Đồng Bộ Tự Động (YouTube Data API v3)
+                    </span>
+                    <button type="button" onclick="toggleApiGuide()" class="text-xs text-sky-400 hover:text-sky-300 underline font-medium">
+                        Xem cách lấy API Key
+                    </button>
+                </div>
+
+                <!-- Hướng dẫn nhanh thu gọn -->
+                <div id="api-guide-box" class="hidden p-3.5 rounded-xl bg-slate-900/90 border border-slate-700 text-xs text-slate-300 space-y-2 leading-relaxed">
+                    <p class="font-bold text-amber-400">4 bước lấy YouTube API Key miễn phí (chỉ mất 2 phút):</p>
+                    <ol class="list-decimal ml-4 space-y-1">
+                        <li>Truy cập <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" class="text-sky-400 underline">Google Cloud Console</a> và đăng nhập bằng Gmail của bạn.</li>
+                        <li>Tạo một Project mới (VD: <code class="bg-slate-800 px-1 rounded">YT-Growth-Tool</code>).</li>
+                        <li>Vào mục <strong>APIs &amp; Services &gt; Library</strong>, tìm và bấm <strong>Enable (Bật)</strong> cho <strong>YouTube Data API v3</strong>.</li>
+                        <li>Vào <strong>APIs &amp; Services &gt; Credentials &gt; Create Credentials &gt; API Key</strong>, sau đó copy mã Key dán vào ô bên dưới.</li>
+                    </ol>
+                    <p class="text-[11px] text-slate-400 italic">* Lưu ý: API Key được lưu an toàn ngay trên trình duyệt của bạn (LocalStorage). Chỉ số RPM/Doanh thu bảo mật của AdSense cần nhập tay bên dưới.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">YouTube Data API Key</label>
+                        <input type="password" id="cfg-yt-apikey" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500" placeholder="AIzaSy...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Handle (@tenkenh) hoặc Channel ID</label>
+                        <input type="text" id="cfg-yt-handle" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500" placeholder="VD: @MrBeast hoặc UC...">
+                    </div>
+                </div>
+                <button type="button" id="btn-sync-yt" onclick="syncYouTubeChannel(true)" class="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold shadow-lg shadow-rose-600/20 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Kết Nối &amp; Đồng Bộ Dữ Liệu Thực Tế
+                </button>
+            </div>
+
+            <!-- Form cấu hình thông số thủ công & doanh thu -->
+            <form id="channel-settings-form" class="space-y-4">
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <span>Thông số kênh &amp; Doanh thu</span>
+                    <div class="flex-1 h-px bg-slate-800"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Tên kênh YouTube</label>
+                    <input type="text" id="cfg-name" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Ngách nội dung chính (Niche)</label>
+                    <input type="text" id="cfg-niche" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500" placeholder="VD: Công nghệ AI, Tài chính, Ẩm thực..." required>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Số người đăng ký</label>
+                        <input type="number" id="cfg-subs" min="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Lượt xem / 28 ngày</label>
+                        <input type="number" id="cfg-views" min="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">RPM trung bình ($)</label>
+                        <input type="number" id="cfg-rpm" step="0.1" min="0.1" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Mục tiêu tháng ($)</label>
+                        <input type="number" id="cfg-goal" min="10" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500" required>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeChannelModal()" class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 transition">Hủy</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 transition">Lưu Thay Đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobile-overlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 hidden lg:hidden"></div>
+
+    <div class="min-h-screen flex flex-col lg:flex-row">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-40 h-screen w-64 bg-slate-900/95 border-r border-slate-800/80 flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0">
+            <!-- Brand Header -->
+            <div class="p-5 border-b border-slate-800/80 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center shadow-lg shadow-rose-600/30">
+                        <i class="fa-brands fa-youtube text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-base leading-tight tracking-tight">YT Growth AI</h1>
+                        <p class="text-[11px] text-rose-400 font-medium">Creator Monetization</p>
+                    </div>
+                </div>
+                <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden text-slate-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Channel Mini Profile -->
+            <div class="p-4 mx-3 mt-4 rounded-xl bg-slate-950/70 border border-slate-800/80">
+                <div class="flex items-center gap-2.5 mb-2">
+                    <img id="side-channel-avatar" src="" alt="Avatar" class="hidden w-9 h-9 rounded-full object-cover border border-slate-700 shrink-0">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between">
+                            <span id="side-channel-name" class="font-semibold text-sm text-white truncate">Kênh Creator Pro</span>
+                            <button type="button" onclick="openChannelModal()" title="Chỉnh sửa & Kết nối API" class="text-slate-400 hover:text-rose-400 p-1 rounded-lg transition">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                        </div>
+                        <p id="side-channel-niche" class="text-xs text-slate-400 truncate">Công nghệ AI &amp; Kiếm tiền Online</p>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between gap-2 text-[11px]">
+                    <span id="side-sync-badge" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium border border-slate-700">
+                        <i class="fa-solid fa-link-slash mr-1 text-slate-400"></i>Chưa đồng bộ API
+                    </span>
+                    <button type="button" id="btn-quick-resync" onclick="syncYouTubeChannel(false)" title="Đồng bộ lại dữ liệu mới nhất" class="hidden text-sky-400 hover:text-sky-300 p-1 transition">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Nav Links -->
+            <nav class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+                <button type="button" onclick="switchTab('dashboard')" data-tab="dashboard" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition text-left bg-rose-600/15 text-rose-400 border border-rose-500/20">
+                    <i class="fa-solid fa-chart-line w-5 text-center"></i>
+                    <span>Tổng Quan &amp; Kiếm Tiền</span>
+                </button>
+                <button type="button" onclick="switchTab('trends')" data-tab="trends" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition text-left text-slate-400 hover:bg-slate-800/60 hover:text-white border border-transparent">
+                    <i class="fa-solid fa-fire-flame-curved w-5 text-center"></i>
+                    <span>Radar Xu Hướng AI</span>
+                    <span class="ml-auto text-[10px] px-1.5 py-0.5 rounded-md bg-rose-500/20 text-rose-300 font-semibold">LIVE</span>
+                </button>
+                <button type="button" onclick="switchTab('optimizer')" data-tab="optimizer" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition text-left text-slate-400 hover:bg-slate-800/60 hover:text-white border border-transparent">
+                    <i class="fa-solid fa-wand-magic-sparkles w-5 text-center"></i>
+                    <span>Tối Ưu SEO &amp; Viral</span>
+                </button>
+                <button type="button" onclick="switchTab('engagement')" data-tab="engagement" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition text-left text-slate-400 hover:bg-slate-800/60 hover:text-white border border-transparent">
+                    <i class="fa-solid fa-comments w-5 text-center"></i>
+                    <span>Kéo Tương Tác Fan</span>
+                </button>
+                <button type="button" onclick="switchTab('planner')" data-tab="planner" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition text-left text-slate-400 hover:bg-slate-800/60 hover:text-white border border-transparent">
+                    <i class="fa-solid fa-calendar-check w-5 text-center"></i>
+                    <span>Kế Hoạch Video</span>
+                    <span id="planner-badge" class="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium">3</span>
+                </button>
+            </nav>
+
+            <!-- Footer Tip -->
+            <div class="p-4 border-t border-slate-800/80">
+                <div class="p-3 rounded-xl bg-gradient-to-br from-indigo-500/10 to-rose-500/10 border border-slate-800">
+                    <p class="text-[11px] text-slate-300 leading-relaxed">
+                        <i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i>
+                        <strong>Mẹo RPM cao:</strong> Video dài trên 8 phút &amp; chèn chủ đề tài chính/công nghệ giúp tăng 2x doanh thu quảng cáo.
+                    </p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="flex-1 min-w-0 flex flex-col">
+            <!-- Top Header Bar -->
+            <header class="sticky top-0 z-20 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div>
+                        <h2 id="page-title" class="text-lg sm:text-xl font-bold text-white">Tổng Quan &amp; Chiến Lược Kiếm Tiền</h2>
+                        <p id="page-subtitle" class="text-xs text-slate-400 hidden sm:block">Theo dõi chỉ số tăng trưởng và tối ưu hóa dòng tiền từ kênh YouTube của bạn</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <button type="button" onclick="openChannelModal()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs sm:text-sm font-medium text-slate-200 transition flex items-center gap-2">
+                        <i class="fa-solid fa-plug text-emerald-400"></i>
+                        <span class="hidden sm:inline">Liên kết YouTube</span>
+                    </button>
+                    <button type="button" onclick="switchTab('trends')" class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs sm:text-sm font-semibold text-white shadow-lg shadow-rose-600/20 transition flex items-center gap-2">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Tìm Trend Ngay</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+                <!-- ==================== TAB 1: DASHBOARD & MONETIZATION ==================== -->
+                <section id="tab-dashboard" class="tab-content space-y-6">
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-medium text-slate-400">Người đăng ký (Subs)</span>
+                                <div class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-users text-sm"></i>
+                                </div>
+                            </div>
+                            <div id="kpi-subs" class="text-2xl font-extrabold text-white">24,850</div>
+                            <div class="mt-2 flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                                <i class="fa-solid fa-arrow-trend-up"></i> +14.2% so với tháng trước
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-medium text-slate-400">Lượt xem (28 ngày)</span>
+                                <div class="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-eye text-sm"></i>
+                                </div>
+                            </div>
+                            <div id="kpi-views" class="text-2xl font-extrabold text-white">485,200</div>
+                            <div class="mt-2 flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                                <i class="fa-solid fa-arrow-trend-up"></i> CTR TB: 7.4% • Giữ chân: 54%
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-medium text-slate-400">Doanh thu AdSense Ước Tính</span>
+                                <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-sack-dollar text-sm"></i>
+                                </div>
+                            </div>
+                            <div id="kpi-revenue" class="text-2xl font-extrabold text-emerald-400">$1,213.00</div>
+                            <div id="kpi-revenue-vnd" class="mt-2 text-xs text-slate-400 font-medium">≈ 30,810,200 VNĐ / tháng</div>
+                        </div>
+
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs font-medium text-slate-400">Tiến Độ Mục Tiêu Tháng</span>
+                                <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-bullseye text-sm"></i>
+                                </div>
+                            </div>
+                            <div class="flex items-baseline justify-between">
+                                <span id="kpi-goal-percent" class="text-2xl font-extrabold text-white">61%</span>
+                                <span id="kpi-goal-target" class="text-xs text-slate-400">Mục tiêu: $2,000</span>
+                            </div>
+                            <div class="w-full bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
+                                <div id="kpi-goal-bar" class="bg-gradient-to-r from-rose-500 to-amber-400 h-2 rounded-full transition-all duration-500" style="width: 61%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts & Monetization Simulator Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Growth & Revenue Chart -->
+                        <div class="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                                <div>
+                                    <h3 class="text-base font-bold text-white">Biểu Đồ Tăng Trưởng &amp; Doanh Thu (6 Tháng)</h3>
+                                    <p class="text-xs text-slate-400">So sánh lượt xem và thu nhập ước tính</p>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-xs text-slate-300 font-medium">
+                                    RPM hiện tại: <strong id="chart-rpm-badge" class="text-emerald-400">$2.50</strong>
+                                </span>
+                            </div>
+                            <div class="relative flex-1 min-h-[260px] w-full">
+                                <canvas id="growthChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Multi-Stream Monetization Simulator -->
+                        <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-calculator text-emerald-400"></i> Mô Phỏng Thu Nhập Đa Nguồn
+                                    </h3>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1.5">
+                                            <span class="text-slate-300">Lượt xem hàng tháng</span>
+                                            <span id="sim-views-val" class="font-bold text-white">500,000 views</span>
+                                        </div>
+                                        <input type="range" id="sim-views" min="10000" max="5000000" step="10000" value="500000" oninput="updateSimulator()" class="w-full accent-rose-500 cursor-pointer">
+                                    </div>
+
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1.5">
+                                            <span class="text-slate-300">RPM Quảng cáo (USD / 1,000 view)</span>
+                                            <span id="sim-rpm-val" class="font-bold text-emerald-400">$2.50</span>
+                                        </div>
+                                        <input type="range" id="sim-rpm" min="0.3" max="15" step="0.1" value="2.5" oninput="updateSimulator()" class="w-full accent-emerald-500 cursor-pointer">
+                                    </div>
+
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1.5">
+                                            <span class="text-slate-300">Tỷ lệ chuyển đổi Affiliate / Sản phẩm (%)</span>
+                                            <span id="sim-aff-val" class="font-bold text-sky-400">0.4% ($5/đơn)</span>
+                                        </div>
+                                        <input type="range" id="sim-aff" min="0" max="3" step="0.1" value="0.4" oninput="updateSimulator()" class="w-full accent-sky-500 cursor-pointer">
+                                    </div>
+
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1.5">
+                                            <span class="text-slate-300">Số hợp đồng Booking / Tài trợ tháng</span>
+                                            <span id="sim-spon-val" class="font-bold text-amber-400">2 video</span>
+                                        </div>
+                                        <input type="range" id="sim-spon" min="0" max="10" step="1" value="2" oninput="updateSimulator()" class="w-full accent-amber-500 cursor-pointer">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Simulator Result Box -->
+                            <div class="mt-5 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                                <div class="flex justify-between text-xs text-slate-400">
+                                    <span>AdSense (YouTube trả):</span>
+                                    <span id="res-adsense" class="text-slate-200 font-semibold">$1,250</span>
+                                </div>
+                                <div class="flex justify-between text-xs text-slate-400">
+                                    <span>Affiliate / Bán hàng:</span>
+                                    <span id="res-aff" class="text-slate-200 font-semibold">$1,000</span>
+                                </div>
+                                <div class="flex justify-between text-xs text-slate-400">
+                                    <span>Booking / Tài trợ nhãn hàng:</span>
+                                    <span id="res-spon" class="text-slate-200 font-semibold">$600</span>
+                                </div>
+                                <div class="pt-2.5 mt-2 border-t border-slate-800 flex items-baseline justify-between">
+                                    <span class="text-xs font-bold text-white uppercase">Tổng thu nhập / tháng</span>
+                                    <div class="text-right">
+                                        <div id="res-total-usd" class="text-xl font-extrabold text-emerald-400">$2,850</div>
+                                        <div id="res-total-vnd" class="text-xs text-slate-400 font-medium">≈ 72.4 triệu VNĐ</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Synced Recent Videos From Real YouTube Channel -->
+                    <div id="synced-videos-section" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-5">
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <i class="fa-brands fa-youtube text-rose-500"></i> Video Mới Nhất Trên Kênh (Đồng Bộ Thực Tế)
+                                </h3>
+                                <p class="text-xs text-slate-400">Phân tích chỉ số tương tác thực tế và chuyển thẳng sang AI tối ưu hoặc trả lời bình luận</p>
+                            </div>
+                            <button type="button" onclick="syncYouTubeChannel(false)" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-rotate"></i> Cập nhật số liệu
+                            </button>
+                        </div>
+                        <div id="synced-videos-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                    </div>
+
+                    <!-- Actionable Monetization Checklist -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5">
+                        <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-crown text-amber-400"></i> 4 Đòn Bẩy Tối Đa Hóa Doanh Thu &amp; Tương Tác
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                                <div class="text-rose-400 text-xs font-bold uppercase mb-1">1. Quy tắc 30 giây đầu</div>
+                                <p class="text-xs text-slate-400 leading-relaxed">Giữ trên 65% người xem ở mốc 0:30 để thuật toán YouTube đẩy đề xuất mạnh sang tệp khán giả mới.</p>
+                            </div>
+                            <div class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                                <div class="text-emerald-400 text-xs font-bold uppercase mb-1">2. Video dài &gt; 8 phút</div>
+                                <p class="text-xs text-slate-400 leading-relaxed">Mở khóa quảng cáo giữa video (Mid-roll Ads), tăng RPM trung bình từ 40% đến 120% so với video ngắn.</p>
+                            </div>
+                            <div class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                                <div class="text-sky-400 text-xs font-bold uppercase mb-1">3. Phễu Shorts -&gt; Long</div>
+                                <p class="text-xs text-slate-400 leading-relaxed">Dùng YouTube Shorts gắn link "Video liên quan" trỏ trực tiếp về video dài để vừa kéo sub vừa tăng tiền AdSense.</p>
+                            </div>
+                            <div class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                                <div class="text-amber-400 text-xs font-bold uppercase mb-1">4. Bình luận ghim bán hàng</div>
+                                <p class="text-xs text-slate-400 leading-relaxed">Đặt link Affiliate hoặc sản phẩm số ngay bình luận đầu tiên kèm câu hỏi mở để kích thích tương tác.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== TAB 2: AI TREND RADAR (GOOGLE SEARCH GROUNDED) ==================== -->
+                <section id="tab-trends" class="tab-content hidden space-y-6">
+                    <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/30 border border-slate-800 rounded-2xl p-5 sm:p-6">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+                            <div>
+                                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-semibold mb-2">
+                                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> Kết nối Google Search Thời Gian Thực
+                                </div>
+                                <h3 class="text-xl font-bold text-white">Radar Phân Tích Xu Hướng &amp; Ngách Kiếm Tiền</h3>
+                                <p class="text-sm text-slate-400 mt-1">AI quét dữ liệu tìm kiếm mới nhất để tìm ra chủ đề đang lên xu hướng, ít cạnh tranh và có RPM cao.</p>
+                            </div>
+                        </div>
+
+                        <!-- Search Controls -->
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                            <div class="md:col-span-5">
+                                <label class="block text-xs text-slate-400 mb-1.5">Chủ đề / Ngách kênh của bạn</label>
+                                <input type="text" id="trend-niche-input" value="Công nghệ AI & Kiếm tiền Online" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500" placeholder="VD: Review ẩm thực, Tài chính cá nhân, Game...">
+                            </div>
+                            <div class="md:col-span-3">
+                                <label class="block text-xs text-slate-400 mb-1.5">Thị trường mục tiêu</label>
+                                <select id="trend-region-input" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
+                                    <option value="Việt Nam">Việt Nam (VN)</option>
+                                    <option value="Quốc tế (Mỹ/Âu - RPM cực cao)">Quốc tế (Mỹ/Âu - RPM cao)</option>
+                                    <option value="Toàn cầu & Việt Nam">Cả Việt Nam &amp; Quốc tế</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs text-slate-400 mb-1.5">Định dạng</label>
+                                <select id="trend-format-input" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
+                                    <option value="Video dài (>8 phút)">Video dài (&gt;8p)</option>
+                                    <option value="YouTube Shorts">YouTube Shorts</option>
+                                    <option value="Cả Video dài và Shorts">Kết hợp cả 2</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2 flex items-end">
+                                <button type="button" id="btn-scan-trends" onclick="analyzeTrendsAI()" class="w-full py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm shadow-lg shadow-rose-600/25 transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-satellite-dish"></i> Quét Trend
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Niche Chips -->
+                        <div class="flex flex-wrap items-center gap-2 mt-4">
+                            <span class="text-xs text-slate-400">Gợi ý nhanh:</span>
+                            <button type="button" onclick="setTrendNiche('Trí tuệ nhân tạo AI & Ứng dụng')" class="px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition">AI &amp; Công nghệ</button>
+                            <button type="button" onclick="setTrendNiche('Tài chính cá nhân & Đầu tư')" class="px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition">Tài chính (RPM cao)</button>
+                            <button type="button" onclick="setTrendNiche('Review Đồ Gia Dụng & Affiliate')" class="px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition">Review Affiliate</button>
+                            <button type="button" onclick="setTrendNiche('Kể chuyện lịch sử / Bí ẩn Faceless')" class="px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition">Kênh Faceless</button>
+                            <button type="button" onclick="setTrendNiche('Sức khỏe, Gym & Dinh dưỡng')" class="px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition">Sức khỏe &amp; Lifestyle</button>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="trend-loading" class="hidden py-12 text-center bg-slate-900/60 border border-slate-800 rounded-2xl">
+                        <div class="inline-block w-10 h-10 border-4 border-rose-500/30 border-t-rose-500 rounded-full animate-spin mb-3"></div>
+                        <p class="text-sm font-medium text-white">AI đang quét xu hướng mới nhất trên Google &amp; YouTube...</p>
+                        <p class="text-xs text-slate-400 mt-1">Đang phân tích tiềm năng lượt xem, RPM và góc khai thác viral</p>
+                    </div>
+
+                    <!-- Trend Results -->
+                    <div id="trend-results-container" class="hidden space-y-5">
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-base font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-fire text-rose-500"></i> Báo Cáo Xu Hướng &amp; Ý Tưởng Kiếm Tiền
+                                </h4>
+                                <button type="button" onclick="copyElementText('trend-markdown-output')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 transition flex items-center gap-1.5">
+                                    <i class="fa-regular fa-copy"></i> Sao chép báo cáo
+                                </button>
+                            </div>
+                            <div id="trend-markdown-output" class="prose prose-invert max-w-none text-sm text-slate-300 space-y-3 leading-relaxed"></div>
+
+                            <!-- Quick Add Idea From Trend -->
+                            <div class="mt-6 pt-4 border-t border-slate-800 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                                <input type="text" id="quick-save-trend-title" placeholder="Nhập tiêu đề ý tưởng tâm đắc từ báo cáo trên để lưu vào Kế hoạch..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500">
+                                <button type="button" onclick="saveTrendToPlanner()" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition whitespace-nowrap">
+                                    <i class="fa-solid fa-plus mr-1"></i> Lưu vào Kế Hoạch
+                                </button>
+                            </div>
+
+                            <!-- Grounding Sources -->
+                            <div id="trend-sources-box" class="hidden mt-5 pt-4 border-t border-slate-800">
+                                <p class="text-xs font-semibold text-slate-400 mb-2"><i class="fa-brands fa-google mr-1"></i> Nguồn dữ liệu tham khảo thực tế:</p>
+                                <div id="trend-sources-list" class="flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== TAB 3: SEO & VIRAL OPTIMIZER ==================== -->
+                <section id="tab-optimizer" class="tab-content hidden space-y-6">
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6">
+                        <h3 class="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles text-rose-500"></i> Tối Ưu Hóa Video Chuẩn Viral &amp; Tăng Tương Tác
+                        </h3>
+                        <p class="text-xs sm:text-sm text-slate-400 mb-5">Nhập ý tưởng video của bạn. AI sẽ thiết kế trọn bộ: Tiêu đề CTR cao, Ý tưởng Thumbnail, Kịch bản Hook 30s giữ chân người xem, Câu hỏi ghim bình luận và bộ Tags chuẩn SEO.</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                            <div class="md:col-span-8">
+                                <label class="block text-xs text-slate-400 mb-1.5">Ý tưởng hoặc tiêu đề nháp của video</label>
+                                <input type="text" id="opt-topic" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500" placeholder="VD: Cách dùng AI làm video YouTube kiếm tiền mà không cần lộ mặt năm 2026">
+                            </div>
+                            <div class="md:col-span-4">
+                                <label class="block text-xs text-slate-400 mb-1.5">Mục tiêu chính của video</label>
+                                <select id="opt-goal" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-rose-500">
+                                    <option value="Tối đa hóa CTR & Lượt xem Viral">Tối đa hóa CTR &amp; Lượt xem</option>
+                                    <option value="Tăng bình luận & Đăng ký kênh">Tăng Bình luận &amp; Sub</option>
+                                    <option value="Bán hàng Affiliate / Chuyển đổi cao">Bán hàng Affiliate / Doanh thu</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            <button type="button" id="btn-optimize-video" onclick="optimizeVideoAI()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-semibold text-sm shadow-lg shadow-rose-600/25 transition flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Tạo Bộ Tối Ưu AI
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Optimizer Loading -->
+                    <div id="opt-loading" class="hidden py-12 text-center bg-slate-900/60 border border-slate-800 rounded-2xl">
+                        <div class="inline-block w-10 h-10 border-4 border-rose-500/30 border-t-rose-500 rounded-full animate-spin mb-3"></div>
+                        <p class="text-sm font-medium text-white">AI đang sáng tạo tiêu đề CTR cao, Thumbnail &amp; Hook 30 giây...</p>
+                    </div>
+
+                    <!-- Optimizer Structured Results -->
+                    <div id="opt-results" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <!-- Titles -->
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5">
+                            <h4 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                                <i class="fa-solid fa-heading text-rose-400"></i> 5 Tiêu Đề Kích Thích Click (High CTR)
+                            </h4>
+                            <div id="opt-titles-list" class="space-y-2.5"></div>
+                        </div>
+
+                        <!-- Thumbnail Concept -->
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5">
+                            <h4 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                                <i class="fa-solid fa-image text-amber-400"></i> Thiết Kế Thumbnail Hút Mắt
+                            </h4>
+                            <div id="opt-thumbnail-box" class="space-y-3 text-sm text-slate-300"></div>
+                        </div>
+
+                        <!-- 30s Hook Script -->
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-stopwatch text-sky-400"></i> Kịch Bản Hook 30 Giây Đầu (Giữ Chân Người Xem)
+                                </h4>
+                                <button type="button" onclick="copyElementText('opt-hook-text')" class="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800">
+                                    <i class="fa-regular fa-copy mr-1"></i>Copy
+                                </button>
+                            </div>
+                            <div id="opt-hook-text" class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-300 leading-relaxed whitespace-pre-line"></div>
+                        </div>
+
+                        <!-- Engagement CTA & Tags -->
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-thumbtack text-emerald-400"></i> Bình Luận Ghim Kéo Tương Tác
+                                    </h4>
+                                    <button type="button" onclick="copyElementText('opt-pinned-comment')" class="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800">
+                                        <i class="fa-regular fa-copy mr-1"></i>Copy
+                                    </button>
+                                </div>
+                                <div id="opt-pinned-comment" class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-emerald-200/90"></div>
+                            </div>
+
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-tags text-indigo-400"></i> Từ Khóa &amp; Tags Chuẩn SEO
+                                    </h4>
+                                    <button type="button" onclick="copyTags()" class="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800">
+                                        <i class="fa-regular fa-copy mr-1"></i>Copy tất cả
+                                    </button>
+                                </div>
+                                <div id="opt-tags-list" class="flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== TAB 4: ENGAGEMENT HUB ==================== -->
+                <section id="tab-engagement" class="tab-content hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- AI Comment Reply Generator -->
+                        <div class="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6">
+                            <h3 class="text-base font-bold text-white mb-1 flex items-center gap-2">
+                                <i class="fa-solid fa-comments text-sky-400"></i> Trợ Lý Trả Lời Bình Luận Tăng Tương Tác
+                            </h3>
+                            <p class="text-xs text-slate-400 mb-4">Dán bình luận từ khán giả (khen ngợi, câu hỏi hoặc góp ý trái chiều). AI sẽ viết câu trả lời thông minh giúp kéo dài cuộc hội thoại để thuật toán YouTube đánh giá cao.</p>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs text-slate-400 mb-1.5">Bình luận của khán giả</label>
+                                    <textarea id="eng-comment-input" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500" placeholder="VD: Video rất hay nhưng mình mới bắt đầu không có máy tính mạnh thì có làm được không bạn?"></textarea>
+                                </div>
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <div class="flex items-center gap-2">
+                                        <label class="text-xs text-slate-400">Phong cách:</label>
+                                        <select id="eng-tone" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none">
+                                            <option value="Thân thiện, gần gũi & đặt câu hỏi ngược lại">Thân thiện &amp; Kéo tương tác</option>
+                                            <option value="Hài hước, bắt trend GenZ">Hài hước, trẻ trung</option>
+                                            <option value="Chuyên gia, uy tín & khéo léo giới thiệu link Affiliate">Chuyên gia &amp; Bán hàng khéo</option>
+                                            <option value="Lịch sự, bình tĩnh xử lý bình luận tiêu cực (anti-fan)">Xử lý Anti-fan tinh tế</option>
+                                        </select>
+                                    </div>
+                                    <button type="button" id="btn-gen-reply" onclick="generateReplyAI()" class="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold transition flex items-center gap-2">
+                                        <i class="fa-solid fa-paper-plane"></i> Tạo Câu Trả Lời
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="eng-reply-output" class="hidden mt-5 space-y-3">
+                                <div class="p-4 rounded-xl bg-slate-950 border border-sky-500/30">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-bold text-sky-400">Gợi ý trả lời tối ưu thuật toán:</span>
+                                        <button type="button" onclick="copyElementText('eng-reply-text')" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded-lg">
+                                            <i class="fa-regular fa-copy mr-1"></i>Sao chép
+                                        </button>
+                                    </div>
+                                    <p id="eng-reply-text" class="text-sm text-slate-200 leading-relaxed whitespace-pre-line"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Community Post Poll Generator -->
+                        <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-base font-bold text-white mb-1 flex items-center gap-2">
+                                    <i class="fa-solid fa-square-poll-vertical text-amber-400"></i> Tạo Bài Đăng Tab Cộng Đồng (Poll)
+                                </h3>
+                                <p class="text-xs text-slate-400 mb-4">Tab Cộng đồng giúp tiếp cận lại subscriber cũ miễn phí và thăm dò chủ đề video tiếp theo.</p>
+
+                                <div class="space-y-3">
+                                    <input type="text" id="poll-topic" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500" placeholder="Chủ đề muốn khảo sát (VD: Chọn video cuối tuần)">
+                                    <button type="button" id="btn-gen-poll" onclick="generateCommunityPollAI()" class="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold transition">
+                                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Tạo 2 Mẫu Khảo Sát Tương Tác Cao
+                                    </button>
+                                </div>
+
+                                <div id="poll-output" class="hidden mt-4 p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line max-h-64 overflow-y-auto"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== TAB 5: CONTENT PLANNER ==================== -->
+                <section id="tab-planner" class="tab-content hidden space-y-6">
+                    <!-- Add New Video Form -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5">
+                        <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-plus-circle text-rose-500"></i> Thêm Video Mới Vào Lịch Sản Xuất
+                        </h3>
+                        <form id="add-video-form" class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            <div class="sm:col-span-5">
+                                <input type="text" id="vid-title" required placeholder="Tiêu đề / Ý tưởng video..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-rose-500">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <select id="vid-type" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                                    <option value="Video dài">Video dài</option>
+                                    <option value="Shorts">Shorts</option>
+                                    <option value="Livestream">Livestream</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <select id="vid-status" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none">
+                                    <option value="idea">Ý tưởng</option>
+                                    <option value="production">Đang làm</option>
+                                    <option value="published">Đã đăng</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-3">
+                                <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm transition">
+                                    <i class="fa-solid fa-plus mr-1"></i> Thêm Kế Hoạch
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Kanban Columns -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <!-- Column 1: Idea -->
+                        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+                                <span class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                                    <i class="fa-solid fa-lightbulb"></i> Kho Ý Tưởng
+                                </span>
+                                <span id="count-idea" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">0</span>
+                            </div>
+                            <div id="col-idea" class="space-y-3 flex-1"></div>
+                        </div>
+
+                        <!-- Column 2: Production -->
+                        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+                                <span class="text-sm font-bold text-sky-400 flex items-center gap-2">
+                                    <i class="fa-solid fa-clapperboard"></i> Đang Quay / Dựng / SEO
+                                </span>
+                                <span id="count-production" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">0</span>
+                            </div>
+                            <div id="col-production" class="space-y-3 flex-1"></div>
+                        </div>
+
+                        <!-- Column 3: Published -->
+                        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+                                <span class="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                                    <i class="fa-solid fa-circle-check"></i> Đã Xuất Bản
+                                </span>
+                                <span id="count-published" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">0</span>
+                            </div>
+                            <div id="col-published" class="space-y-3 flex-1"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // ==========================================
+        // 1. STATE MANAGEMENT & INITIAL DATA
+        // ==========================================
+        const USD_TO_VND = 25400;
+        const apiKey = ""; // Canvas runtime tự động cung cấp API key
+
+        const defaultProfile = {
+            name: "Kênh Creator Pro",
+            niche: "Công nghệ AI & Kiếm tiền Online",
+            subs: 24850,
+            views: 485200,
+            rpm: 2.5,
+            goal: 2000,
+            avatar: "",
+            ytApiKey: "",
+            ytHandle: "",
+            lastSynced: null
+        };
+
+        const defaultVideos = [
+            { id: 1, title: "5 Công cụ AI miễn phí giúp tự động hóa kênh YouTube 2026", type: "Video dài", status: "idea", date: "Hôm nay" },
+            { id: 2, title: "Cách mình tăng RPM YouTube từ $1 lên $4 trong 30 ngày", type: "Video dài", status: "production", date: "Ngày mai" },
+            { id: 3, title: "3 Sai lầm khiến video Shorts bị kẹt 0 view và cách khắc phục", type: "Shorts", status: "published", date: "Tuần trước" }
+        ];
+
+        function loadStorage(key, fallback) {
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        let channelProfile = { ...defaultProfile, ...loadStorage('yt_growth_profile', {}) };
+        let videoPlanner = loadStorage('yt_growth_videos', defaultVideos);
+        let syncedVideos = loadStorage('yt_growth_synced_videos', []);
+        let growthChartInstance = null;
+        let currentGeneratedTags = [];
+
+        // ==========================================
+        // 2. GEMINI API HELPER (EXPONENTIAL BACKOFF)
+        // ==========================================
+        async function callGeminiAPI({ prompt, systemPrompt = "", useSearch = false, responseSchema = null }) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }]
+            };
+
+            if (systemPrompt) {
+                payload.systemInstruction = {
+                    parts: [{ text: systemPrompt }]
+                };
+            }
+
+            if (useSearch) {
+                payload.tools = [{ "google_search": {} }];
+            }
+
+            if (responseSchema) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json",
+                    responseSchema: responseSchema
+                };
+            }
+
+            const maxRetries = 4;
+            let delay = 1000;
+
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (attempt < maxRetries && (response.status === 429 || response.status >= 500)) {
+                            await new Promise(r => setTimeout(r, delay));
+                            delay *= 2;
+                            continue;
+                        }
+                        throw new Error(`HTTP Error: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+                    const text = candidate?.content?.parts?.[0]?.text;
+
+                    if (!text) throw new Error("Không nhận được nội dung từ AI.");
+
+                    let sources = [];
+                    const attributions = candidate?.groundingMetadata?.groundingAttributions;
+                    if (attributions && Array.isArray(attributions)) {
+                        sources = attributions
+                            .map(attr => ({ uri: attr.web?.uri, title: attr.web?.title }))
+                            .filter(s => s.uri && s.title);
+                    }
+
+                    return { text, sources };
+                } catch (error) {
+                    if (attempt < maxRetries) {
+                        await new Promise(r => setTimeout(r, delay));
+                        delay *= 2;
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 3. UI UTILITIES (TOASTS, TABS, CLIPBOARD)
+        // ==========================================
+        function escapeHTML(str = "") {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            const colors = {
+                success: 'bg-emerald-950/95 border-emerald-500/40 text-emerald-200',
+                error: 'bg-rose-950/95 border-rose-500/40 text-rose-200',
+                info: 'bg-slate-900/95 border-sky-500/40 text-sky-200'
+            };
+            const icons = {
+                success: 'fa-circle-check text-emerald-400',
+                error: 'fa-circle-exclamation text-rose-400',
+                info: 'fa-circle-info text-sky-400'
+            };
+
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i><span>${escapeHTML(message)}</span>`;
+
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3400);
+        }
+
+        function copyTextToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("Đã sao chép vào khay nhớ tạm!", "success");
+            } catch (err) {
+                showToast("Không thể sao chép tự động.", "error");
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function copyElementText(elementId) {
+            const el = document.getElementById(elementId);
+            if (el) copyTextToClipboard(el.innerText);
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        const tabMeta = {
+            dashboard: { title: "Tổng Quan & Chiến Lược Kiếm Tiền", subtitle: "Theo dõi chỉ số tăng trưởng và tối ưu hóa dòng tiền từ kênh YouTube" },
+            trends: { title: "Radar Xu Hướng AI (Real-Time)", subtitle: "Quét chủ đề đang bùng nổ trên Google & YouTube để đón đầu lượt xem" },
+            optimizer: { title: "Tối Ưu Hóa SEO & Viral", subtitle: "Thiết kế Tiêu đề CTR cao, Thumbnail, Hook 30s và bộ từ khóa chuẩn SEO" },
+            engagement: { title: "Trung Tâm Kéo Tương Tác Fan", subtitle: "Tự động gợi ý trả lời bình luận và bài đăng cộng đồng kích thích thuật toán" },
+            planner: { title: "Kế Hoạch Sản Xuất Video", subtitle: "Quản lý ý tưởng, tiến độ quay dựng và lịch đăng đều đặn" }
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            const target = document.getElementById(`tab-${tabId}`);
+            if (target) target.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.dataset.tab === tabId) {
+                    btn.className = "nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition text-left bg-rose-600/15 text-rose-400 border border-rose-500/20";
+                } else {
+                    btn.className = "nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition text-left text-slate-400 hover:bg-slate-800/60 hover:text-white border border-transparent";
+                }
+            });
+
+            if (tabMeta[tabId]) {
+                document.getElementById('page-title').textContent = tabMeta[tabId].title;
+                document.getElementById('page-subtitle').textContent = tabMeta[tabId].subtitle;
+            }
+
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) {
+                toggleMobileSidebar();
+            }
+        }
+
+        function formatAIResponseToHTML(text) {
+            const safeText = escapeHTML(text);
+            return safeText
+                .replace(/^### (.*$)/gim, '<h4 class="text-base font-bold text-rose-400 mt-4 mb-2">$1</h4>')
+                .replace(/^## (.*$)/gim, '<h3 class="text-lg font-bold text-white mt-5 mb-2 border-b border-slate-800 pb-1">$1</h3>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
+                .replace(/^\* (.*$)/gim, '<li class="ml-4 list-disc text-slate-300">$1</li>')
+                .replace(/^- (.*$)/gim, '<li class="ml-4 list-disc text-slate-300">$1</li>')
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>');
+        }
+
+        // ==========================================
+        // 4. CHANNEL PROFILE, YOUTUBE API SYNC & DASHBOARD
+        // ==========================================
+        function toggleApiGuide() {
+            document.getElementById('api-guide-box').classList.toggle('hidden');
+        }
+
+        function openChannelModal() {
+            document.getElementById('cfg-yt-apikey').value = channelProfile.ytApiKey || "";
+            document.getElementById('cfg-yt-handle').value = channelProfile.ytHandle || "";
+            document.getElementById('cfg-name').value = channelProfile.name;
+            document.getElementById('cfg-niche').value = channelProfile.niche;
+            document.getElementById('cfg-subs').value = channelProfile.subs;
+            document.getElementById('cfg-views').value = channelProfile.views;
+            document.getElementById('cfg-rpm').value = channelProfile.rpm;
+            document.getElementById('cfg-goal').value = channelProfile.goal;
+
+            const modal = document.getElementById('channel-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeChannelModal() {
+            const modal = document.getElementById('channel-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function syncYouTubeChannel(fromModal = false) {
+            const ytApiKey = fromModal
+                ? document.getElementById('cfg-yt-apikey').value.trim()
+                : (channelProfile.ytApiKey || "").trim();
+            const ytHandle = fromModal
+                ? document.getElementById('cfg-yt-handle').value.trim()
+                : (channelProfile.ytHandle || "").trim();
+
+            if (!ytApiKey || !ytHandle) {
+                showToast("Vui lòng nhập đầy đủ YouTube API Key và Handle (@tenkenh) hoặc Channel ID!", "info");
+                if (!fromModal) openChannelModal();
+                return;
+            }
+
+            const btn = document.getElementById('btn-sync-yt');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đồng bộ từ YouTube...';
+            }
+
+            try {
+                // Hỗ trợ cả Channel ID dạng UC... và Handle dạng @tenkenh
+                const isChannelId = ytHandle.startsWith('UC') && ytHandle.length >= 20;
+                const queryParam = isChannelId
+                    ? `id=${encodeURIComponent(ytHandle)}`
+                    : `forHandle=${encodeURIComponent(ytHandle.startsWith('@') ? ytHandle : '@' + ytHandle)}`;
+
+                const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&${queryParam}&key=${encodeURIComponent(ytApiKey)}`);
+                const chData = await chRes.json();
+
+                if (!chRes.ok || chData.error) {
+                    throw new Error(chData.error?.message || "API Key không hợp lệ hoặc chưa bật YouTube Data API v3.");
+                }
+
+                if (!chData.items || chData.items.length === 0) {
+                    throw new Error("Không tìm thấy kênh YouTube này. Hãy kiểm tra lại @Handle hoặc Channel ID.");
+                }
+
+                const ch = chData.items[0];
+                const subsCount = parseInt(ch.statistics.subscriberCount || 0, 10);
+                const totalViews = parseInt(ch.statistics.viewCount || 0, 10);
+                const uploadsPlaylistId = ch.contentDetails?.relatedPlaylists?.uploads;
+
+                // Lấy 6 video mới nhất của kênh
+                let recentVideos = [];
+                if (uploadsPlaylistId) {
+                    const plRes = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${encodeURIComponent(uploadsPlaylistId)}&maxResults=6&key=${encodeURIComponent(ytApiKey)}`);
+                    const plData = await plRes.json();
+                    const videoIds = (plData.items || []).map(item => item.contentDetails?.videoId).filter(Boolean);
+
+                    if (videoIds.length > 0) {
+                        const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoIds.join(',')}&key=${encodeURIComponent(ytApiKey)}`);
+                        const vData = await vRes.json();
+                        recentVideos = (vData.items || []).map(v => ({
+                            id: v.id,
+                            title: v.snippet.title,
+                            thumbnail: v.snippet.thumbnails?.medium?.url || v.snippet.thumbnails?.default?.url || "",
+                            publishedAt: new Date(v.snippet.publishedAt).toLocaleDateString('vi-VN'),
+                            views: parseInt(v.statistics.viewCount || 0, 10),
+                            likes: parseInt(v.statistics.likeCount || 0, 10),
+                            comments: parseInt(v.statistics.commentCount || 0, 10)
+                        }));
+                    }
+                }
+
+                const recentViewsSum = recentVideos.reduce((acc, v) => acc + v.views, 0);
+                const estimatedMonthlyViews = recentViewsSum > 0 ? recentViewsSum : Math.round(totalViews * 0.15);
+
+                channelProfile = {
+                    ...channelProfile,
+                    name: ch.snippet.title,
+                    avatar: ch.snippet.thumbnails?.default?.url || "",
+                    subs: subsCount,
+                    views: estimatedMonthlyViews,
+                    ytApiKey: ytApiKey,
+                    ytHandle: ytHandle,
+                    lastSynced: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                };
+
+                syncedVideos = recentVideos;
+                localStorage.setItem('yt_growth_profile', JSON.stringify(channelProfile));
+                localStorage.setItem('yt_growth_synced_videos', JSON.stringify(syncedVideos));
+
+                if (fromModal) {
+                    document.getElementById('cfg-name').value = channelProfile.name;
+                    document.getElementById('cfg-subs').value = channelProfile.subs;
+                    document.getElementById('cfg-views').value = channelProfile.views;
+                }
+
+                renderDashboard();
+                renderSyncedVideos();
+                showToast(`Đã đồng bộ kênh "${channelProfile.name}" & ${recentVideos.length} video mới nhất!`, "success");
+            } catch (err) {
+                showToast(err.message || "Lỗi kết nối YouTube API.", "error");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Kết Nối & Đồng Bộ Dữ Liệu Thực Tế';
+                }
+            }
+        }
+
+        async function fetchTopCommentForAI(videoId, videoTitle) {
+            if (!channelProfile.ytApiKey) {
+                showToast("Cần kết nối YouTube API Key để lấy bình luận!", "info");
+                return;
+            }
+            try {
+                const res = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${encodeURIComponent(videoId)}&maxResults=1&order=relevance&key=${encodeURIComponent(channelProfile.ytApiKey)}`);
+                const data = await res.json();
+                const topComment = data.items?.[0]?.snippet?.topLevelComment?.snippet?.textOriginal;
+                if (topComment) {
+                    document.getElementById('eng-comment-input').value = topComment;
+                    switchTab('engagement');
+                    showToast(`Đã tải bình luận nổi bật từ video "${videoTitle.slice(0, 28)}..."`, "success");
+                } else {
+                    showToast("Video này chưa có bình luận nào hoặc đã tắt bình luận.", "info");
+                }
+            } catch (err) {
+                showToast("Không thể tải bình luận của video này.", "error");
+            }
+        }
+
+        function renderSyncedVideos() {
+            const section = document.getElementById('synced-videos-section');
+            const grid = document.getElementById('synced-videos-grid');
+            if (!syncedVideos || syncedVideos.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            grid.innerHTML = '';
+
+            syncedVideos.forEach(v => {
+                const engRate = v.views > 0 ? (((v.likes + v.comments) / v.views) * 100).toFixed(2) : "0.00";
+                const card = document.createElement('div');
+                card.className = "bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex flex-col hover:border-slate-700 transition";
+                card.innerHTML = `
+                    <div class="relative aspect-video bg-slate-900">
+                        <img src="${escapeHTML(v.thumbnail)}" alt="${escapeHTML(v.title)}" onerror="this.src='https://placehold.co/480x270/0f172a/94a3b8?text=YouTube+Video'" class="w-full h-full object-cover">
+                        <span class="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/80 text-[11px] font-semibold text-emerald-400">
+                            Tương tác: ${engRate}%
+                        </span>
+                    </div>
+                    <div class="p-3.5 flex-1 flex flex-col justify-between gap-3">
+                        <div>
+                            <h4 class="text-sm font-semibold text-white line-clamp-2 leading-snug mb-1.5">${escapeHTML(v.title)}</h4>
+                            <div class="flex items-center gap-3 text-xs text-slate-400">
+                                <span><i class="fa-solid fa-eye text-sky-400 mr-1"></i>${v.views.toLocaleString('vi-VN')}</span>
+                                <span><i class="fa-solid fa-thumbs-up text-rose-400 mr-1"></i>${v.likes.toLocaleString('vi-VN')}</span>
+                                <span><i class="fa-solid fa-comment text-amber-400 mr-1"></i>${v.comments.toLocaleString('vi-VN')}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 pt-2 border-t border-slate-800/80">
+                            <button type="button" class="btn-opt-synced flex-1 py-1.5 px-2.5 rounded-lg bg-rose-600/15 hover:bg-rose-600/25 text-rose-400 text-xs font-medium transition">
+                                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Tối ưu SEO
+                            </button>
+                            <button type="button" class="btn-cmt-synced flex-1 py-1.5 px-2.5 rounded-lg bg-sky-600/15 hover:bg-sky-600/25 text-sky-400 text-xs font-medium transition">
+                                <i class="fa-solid fa-comments mr-1"></i>Trả lời Cmt
+                            </button>
+                        </div>
+                    </div>
+                `;
+                card.querySelector('.btn-opt-synced').addEventListener('click', () => sendToOptimizer(v.title));
+                card.querySelector('.btn-cmt-synced').addEventListener('click', () => fetchTopCommentForAI(v.id, v.title));
+                grid.appendChild(card);
+            });
+        }
+
+        document.getElementById('channel-settings-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            channelProfile = {
+                ...channelProfile,
+                ytApiKey: document.getElementById('cfg-yt-apikey').value.trim(),
+                ytHandle: document.getElementById('cfg-yt-handle').value.trim(),
+                name: document.getElementById('cfg-name').value.trim(),
+                niche: document.getElementById('cfg-niche').value.trim(),
+                subs: parseInt(document.getElementById('cfg-subs').value, 10) || 0,
+                views: parseInt(document.getElementById('cfg-views').value, 10) || 0,
+                rpm: parseFloat(document.getElementById('cfg-rpm').value) || 1.0,
+                goal: parseFloat(document.getElementById('cfg-goal').value) || 1000
+            };
+            localStorage.setItem('yt_growth_profile', JSON.stringify(channelProfile));
+            renderDashboard();
+            closeChannelModal();
+            showToast("Đã cập nhật thông số kênh thành công!", "success");
+        });
+
+        function renderDashboard() {
+            document.getElementById('side-channel-name').textContent = channelProfile.name;
+            document.getElementById('side-channel-niche').textContent = channelProfile.niche;
+            document.getElementById('trend-niche-input').value = channelProfile.niche;
+
+            // Hiển thị ảnh đại diện và trạng thái đồng bộ API
+            const avatarEl = document.getElementById('side-channel-avatar');
+            const syncBadge = document.getElementById('side-sync-badge');
+            const resyncBtn = document.getElementById('btn-quick-resync');
+
+            if (channelProfile.avatar) {
+                avatarEl.src = channelProfile.avatar;
+                avatarEl.classList.remove('hidden');
+            } else {
+                avatarEl.classList.add('hidden');
+            }
+
+            if (channelProfile.lastSynced && channelProfile.ytApiKey) {
+                syncBadge.className = "px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-medium border border-emerald-500/20";
+                syncBadge.innerHTML = `<i class="fa-solid fa-check-circle mr-1"></i>Đã đồng bộ (${escapeHTML(channelProfile.lastSynced)})`;
+                resyncBtn.classList.remove('hidden');
+            } else {
+                syncBadge.className = "px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium border border-slate-700";
+                syncBadge.innerHTML = `<i class="fa-solid fa-link-slash mr-1 text-slate-400"></i>Chưa đồng bộ API`;
+                resyncBtn.classList.add('hidden');
+            }
+
+            const estRevenue = (channelProfile.views / 1000) * channelProfile.rpm;
+            const estRevenueVnd = estRevenue * USD_TO_VND;
+            const goalPct = channelProfile.goal > 0
+                ? Math.min(100, Math.round((estRevenue / channelProfile.goal) * 100))
+                : 0;
+
+            document.getElementById('kpi-subs').textContent = channelProfile.subs.toLocaleString('vi-VN');
+            document.getElementById('kpi-views').textContent = channelProfile.views.toLocaleString('vi-VN');
+            document.getElementById('kpi-revenue').textContent = `$${estRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('kpi-revenue-vnd').textContent = `≈ ${Math.round(estRevenueVnd).toLocaleString('vi-VN')} VNĐ / tháng`;
+
+            document.getElementById('kpi-goal-percent').textContent = `${goalPct}%`;
+            document.getElementById('kpi-goal-target').textContent = `Mục tiêu: $${channelProfile.goal.toLocaleString('en-US')}`;
+            document.getElementById('kpi-goal-bar').style.width = `${goalPct}%`;
+            document.getElementById('chart-rpm-badge').textContent = `$${channelProfile.rpm.toFixed(2)}`;
+
+            document.getElementById('sim-views').value = Math.min(5000000, Math.max(10000, channelProfile.views));
+            document.getElementById('sim-rpm').value = Math.min(15, Math.max(0.3, channelProfile.rpm));
+            updateSimulator();
+            renderGrowthChart();
+        }
+
+        function updateSimulator() {
+            const views = parseInt(document.getElementById('sim-views').value, 10);
+            const rpm = parseFloat(document.getElementById('sim-rpm').value);
+            const affRate = parseFloat(document.getElementById('sim-aff').value);
+            const sponsors = parseInt(document.getElementById('sim-spon').value, 10);
+
+            document.getElementById('sim-views-val').textContent = `${views.toLocaleString('vi-VN')} views`;
+            document.getElementById('sim-rpm-val').textContent = `$${rpm.toFixed(2)}`;
+            document.getElementById('sim-aff-val').textContent = `${affRate.toFixed(1)}% ($5/đơn)`;
+            document.getElementById('sim-spon-val').textContent = `${sponsors} video`;
+
+            const adsense = (views / 1000) * rpm;
+            const affiliate = (views * 0.1) * (affRate / 100) * 5;
+            const sponsorRate = Math.max(150, Math.round((views / 1000) * 0.6));
+            const sponsorship = sponsors * sponsorRate;
+
+            const totalUsd = adsense + affiliate + sponsorship;
+            const totalVnd = totalUsd * USD_TO_VND;
+
+            document.getElementById('res-adsense').textContent = `$${Math.round(adsense).toLocaleString('en-US')}`;
+            document.getElementById('res-aff').textContent = `$${Math.round(affiliate).toLocaleString('en-US')}`;
+            document.getElementById('res-spon').textContent = `$${Math.round(sponsorship).toLocaleString('en-US')}`;
+            document.getElementById('res-total-usd').textContent = `$${Math.round(totalUsd).toLocaleString('en-US')}`;
+            document.getElementById('res-total-vnd').textContent = `≈ ${(totalVnd / 1000000).toFixed(1)} triệu VNĐ`;
+        }
+
+        function renderGrowthChart() {
+            const canvas = document.getElementById('growthChart');
+            if (!canvas || typeof Chart === 'undefined') return;
+            const ctx = canvas.getContext('2d');
+            if (growthChartInstance) {
+                growthChartInstance.destroy();
+            }
+
+            const baseViews = channelProfile.views || 100000;
+            const multipliers = [0.52, 0.64, 0.71, 0.85, 0.92, 1.0];
+            const viewsData = multipliers.map(m => Math.round(baseViews * m));
+            const revData = viewsData.map(v => Math.round((v / 1000) * channelProfile.rpm));
+
+            growthChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Tháng -5', 'Tháng -4', 'Tháng -3', 'Tháng -2', 'Tháng trước', 'Hiện tại'],
+                    datasets: [
+                        {
+                            label: 'Doanh thu AdSense ($)',
+                            data: revData,
+                            type: 'line',
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            borderWidth: 3,
+                            tension: 0.35,
+                            fill: true,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'Lượt xem (Views)',
+                            data: viewsData,
+                            backgroundColor: 'rgba(244, 63, 94, 0.75)',
+                            hoverBackgroundColor: '#F43F5E',
+                            borderRadius: 8,
+                            yAxisID: 'y'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#CBD5E1', font: { family: 'Inter', size: 12 } }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: { color: '#94A3B8' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                            ticks: {
+                                color: '#94A3B8',
+                                callback: val => val >= 1000 ? (val / 1000) + 'k' : val
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: {
+                                color: '#34D399',
+                                callback: val => '$' + val
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // 5. AI TREND RADAR (GOOGLE SEARCH GROUNDED)
+        // ==========================================
+        function setTrendNiche(niche) {
+            document.getElementById('trend-niche-input').value = niche;
+        }
+
+        async function analyzeTrendsAI() {
+            const niche = document.getElementById('trend-niche-input').value.trim();
+            const region = document.getElementById('trend-region-input').value;
+            const format = document.getElementById('trend-format-input').value;
+
+            if (!niche) {
+                showToast("Vui lòng nhập chủ đề hoặc ngách kênh của bạn!", "error");
+                return;
+            }
+
+            const btn = document.getElementById('btn-scan-trends');
+            const loading = document.getElementById('trend-loading');
+            const resultsBox = document.getElementById('trend-results-container');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang quét...';
+            loading.classList.remove('hidden');
+            resultsBox.classList.add('hidden');
+
+            const systemPrompt = "Bạn là chuyên gia chiến lược YouTube hàng đầu chuyên tối ưu RPM, thuật toán đề xuất và kiếm tiền đa nguồn. Trả lời bằng tiếng Việt sắc sảo, thực tế, dễ áp dụng ngay.";
+            const prompt = `Hãy tìm kiếm thông tin mới nhất trên Google về xu hướng hiện tại trong ngách "${niche}" tại thị trường "${region}" cho định dạng "${format}".
+Hãy lập báo cáo ngắn gọn, súc tích gồm 3 phần:
+## 1. 3 Xu Hướng Đang Nóng Nhất Hiện Nay
+(Nêu rõ chủ đề đang được tìm kiếm nhiều, tại sao nó hot và góc nhìn mới lạ)
+## 2. 3 Ý Tưởng Video Có Tiềm Năng Viral & RPM Cao
+(Với mỗi ý tưởng, gợi ý Tiêu đề thu hút + Cách kiếm tiền đi kèm như AdSense/Affiliate/Sản phẩm)
+## 3. Chiến Lược Đẩy Đề Xuất & Tương Tác Ngay Tuần Này
+(3 hành động cụ thể để vượt đối thủ trong ngách này)`;
+
+            try {
+                const { text, sources } = await callGeminiAPI({
+                    prompt,
+                    systemPrompt,
+                    useSearch: true
+                });
+
+                document.getElementById('trend-markdown-output').innerHTML = formatAIResponseToHTML(text);
+
+                const sourcesBox = document.getElementById('trend-sources-box');
+                const sourcesList = document.getElementById('trend-sources-list');
+                sourcesList.innerHTML = '';
+
+                if (sources && sources.length > 0) {
+                    sources.slice(0, 6).forEach(src => {
+                        const a = document.createElement('a');
+                        a.href = src.uri;
+                        a.target = "_blank";
+                        a.rel = "noopener noreferrer";
+                        a.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-sky-300 border border-slate-700 transition max-w-xs truncate";
+                        a.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i><span class="truncate">${escapeHTML(src.title)}</span>`;
+                        sourcesList.appendChild(a);
+                    });
+                    sourcesBox.classList.remove('hidden');
+                } else {
+                    sourcesBox.classList.add('hidden');
+                }
+
+                resultsBox.classList.remove('hidden');
+                showToast("Đã hoàn tất phân tích xu hướng thực tế!", "success");
+            } catch (err) {
+                showToast("Lỗi khi kết nối AI phân tích xu hướng. Vui lòng thử lại!", "error");
+            } finally {
+                loading.classList.add('hidden');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> Quét Trend';
+            }
+        }
+
+        function saveTrendToPlanner() {
+            const titleInput = document.getElementById('quick-save-trend-title');
+            const title = titleInput.value.trim();
+            if (!title) {
+                showToast("Hãy nhập tiêu đề ý tưởng bạn muốn lưu!", "info");
+                return;
+            }
+            videoPlanner.unshift({
+                id: Date.now(),
+                title: title,
+                type: document.getElementById('trend-format-input').value.includes('Shorts') ? 'Shorts' : 'Video dài',
+                status: 'idea',
+                date: 'Từ AI Trend'
+            });
+            saveVideos();
+            renderPlanner();
+            titleInput.value = '';
+            showToast("Đã thêm ý tưởng vào Kế Hoạch Video!", "success");
+        }
+
+        // ==========================================
+        // 6. SEO & VIRAL OPTIMIZER (STRUCTURED JSON)
+        // ==========================================
+        async function optimizeVideoAI() {
+            const topic = document.getElementById('opt-topic').value.trim();
+            const goal = document.getElementById('opt-goal').value;
+
+            if (!topic) {
+                showToast("Vui lòng nhập ý tưởng video cần tối ưu!", "error");
+                return;
+            }
+
+            const btn = document.getElementById('btn-optimize-video');
+            const loading = document.getElementById('opt-loading');
+            const results = document.getElementById('opt-results');
+
+            btn.disabled = true;
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    titles: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                text: { type: "STRING" },
+                                ctrScore: { type: "STRING" },
+                                reason: { type: "STRING" }
+                            }
+                        }
+                    },
+                    thumbnail: {
+                        type: "OBJECT",
+                        properties: {
+                            visual: { type: "STRING" },
+                            overlayText: { type: "STRING" },
+                            colorContrast: { type: "STRING" }
+                        }
+                    },
+                    hook30s: { type: "STRING" },
+                    pinnedComment: { type: "STRING" },
+                    tags: {
+                        type: "ARRAY",
+                        items: { type: "STRING" }
+                    }
+                },
+                required: ["titles", "thumbnail", "hook30s", "pinnedComment", "tags"]
+            };
+
+            const prompt = `Tôi đang làm một video YouTube thuộc ngách "${channelProfile.niche}" về chủ đề: "${topic}".
+Mục tiêu chính: "${goal}".
+Hãy tạo bộ tối ưu hóa bằng Tiếng Việt gồm:
+1. 5 tiêu đề kích thích click (CTR cao), kèm điểm CTR dự đoán (VD: "9.2/10") và lý do ngắn gọn.
+2. Ý tưởng thiết kế Thumbnail (hình ảnh chính, dòng chữ ngắn 3-5 từ trên ảnh, phối màu tương phản).
+3. Kịch bản lời thoại Hook 30 giây đầu tiên gây tò mò mạnh để giữ chân người xem.
+4. Một câu bình luận ghim (Pinned Comment) kích thích người xem trả lời và tăng tương tác.
+5. 10 từ khóa/tags chuẩn SEO YouTube.`;
+
+            try {
+                const { text } = await callGeminiAPI({
+                    prompt,
+                    systemPrompt: "Bạn là chuyên gia tối ưu SEO YouTube và tăng trưởng CTR/Retention. Luôn trả về JSON hợp lệ theo schema.",
+                    responseSchema: schema
+                });
+
+                const data = JSON.parse(text);
+
+                // Render Titles
+                const titlesList = document.getElementById('opt-titles-list');
+                titlesList.innerHTML = '';
+                (data.titles || []).forEach(t => {
+                    const row = document.createElement('div');
+                    row.className = "p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-rose-500/40 transition group flex items-start justify-between gap-2";
+                    row.innerHTML = `
+                        <div>
+                            <div class="text-sm font-semibold text-white">${escapeHTML(t.text)}</div>
+                            <div class="text-xs text-slate-400 mt-1">${escapeHTML(t.reason)}</div>
+                        </div>
+                        <div class="flex flex-col items-end gap-1.5 shrink-0">
+                            <span class="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 text-[11px] font-bold">CTR ${escapeHTML(t.ctrScore)}</span>
+                            <button type="button" class="btn-copy-title text-[11px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+                        </div>
+                    `;
+                    row.querySelector('.btn-copy-title').addEventListener('click', () => copyTextToClipboard(t.text));
+                    titlesList.appendChild(row);
+                });
+
+                // Render Thumbnail
+                document.getElementById('opt-thumbnail-box').innerHTML = `
+                    <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                        <span class="text-xs font-bold text-amber-400 uppercase block mb-1">Bố cục hình ảnh:</span>
+                        <p>${escapeHTML(data.thumbnail?.visual)}</p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                        <span class="text-xs font-bold text-rose-400 uppercase block mb-1">Chữ nổi trên ảnh (Text Overlay):</span>
+                        <p class="text-base font-extrabold text-white tracking-wide">"${escapeHTML(data.thumbnail?.overlayText)}"</p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                        <span class="text-xs font-bold text-sky-400 uppercase block mb-1">Màu sắc &amp; Cảm xúc:</span>
+                        <p>${escapeHTML(data.thumbnail?.colorContrast)}</p>
+                    </div>
+                `;
+
+                // Render Hook & Pinned Comment
+                document.getElementById('opt-hook-text').textContent = data.hook30s || "";
+                document.getElementById('opt-pinned-comment').textContent = data.pinnedComment || "";
+
+                // Render Tags
+                currentGeneratedTags = data.tags || [];
+                document.getElementById('opt-tags-list').innerHTML = currentGeneratedTags.map(tag => `
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-indigo-300">#${escapeHTML(tag.replace(/^#/, ''))}</span>
+                `).join('');
+
+                results.classList.remove('hidden');
+                showToast("Đã tạo xong bộ tối ưu SEO & Viral!", "success");
+            } catch (err) {
+                showToast("Có lỗi xảy ra khi tối ưu hóa. Vui lòng thử lại!", "error");
+            } finally {
+                loading.classList.add('hidden');
+                btn.disabled = false;
+            }
+        }
+
+        function copyTags() {
+            if (currentGeneratedTags.length > 0) {
+                copyTextToClipboard(currentGeneratedTags.join(', '));
+            }
+        }
+
+        // ==========================================
+        // 7. ENGAGEMENT HUB (REPLIES & POLLS)
+        // ==========================================
+        async function generateReplyAI() {
+            const comment = document.getElementById('eng-comment-input').value.trim();
+            const tone = document.getElementById('eng-tone').value;
+            if (!comment) {
+                showToast("Hãy dán bình luận của khán giả vào ô trống!", "info");
+                return;
+            }
+
+            const btn = document.getElementById('btn-gen-reply');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang viết...';
+
+            try {
+                const { text } = await callGeminiAPI({
+                    prompt: `Khán giả bình luận trên kênh YouTube "${channelProfile.name}" (ngách ${channelProfile.niche}): "${comment}".
+Hãy viết 2 phương án trả lời theo phong cách "${tone}". Mỗi câu trả lời ngắn gọn (2-4 câu), tự nhiên, và kết thúc bằng một câu hỏi mở hoặc kêu gọi hành động tinh tế để khán giả tiếp tục phản hồi lại (tăng tương tác cho video).`,
+                    systemPrompt: "Bạn là quản trị viên cộng đồng YouTube chuyên nghiệp, am hiểu tâm lý người xem Việt Nam."
+                });
+
+                document.getElementById('eng-reply-text').textContent = text;
+                document.getElementById('eng-reply-output').classList.remove('hidden');
+                showToast("Đã tạo gợi ý trả lời!", "success");
+            } catch (err) {
+                showToast("Không thể tạo câu trả lời lúc này.", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Tạo Câu Trả Lời';
+            }
+        }
+
+        async function generateCommunityPollAI() {
+            const topic = document.getElementById('poll-topic').value.trim() || channelProfile.niche;
+            const btn = document.getElementById('btn-gen-poll');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo khảo sát...';
+
+            try {
+                const { text } = await callGeminiAPI({
+                    prompt: `Hãy tạo 2 mẫu bài đăng khảo sát (Poll) trên Tab Cộng Đồng YouTube cho ngách "${channelProfile.niche}" liên quan đến: "${topic}".
+Mỗi mẫu gồm: Câu hỏi gây tò mò + 4 lựa chọn bình chọn ngắn gọn + 1 câu kêu gọi bình luận bên dưới để tăng đề xuất.`,
+                    systemPrompt: "Bạn là chuyên gia tăng trưởng cộng đồng YouTube."
+                });
+
+                const out = document.getElementById('poll-output');
+                out.textContent = text;
+                out.classList.remove('hidden');
+                showToast("Đã tạo xong mẫu khảo sát Tab Cộng Đồng!", "success");
+            } catch (err) {
+                showToast("Lỗi khi tạo bài đăng cộng đồng.", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Tạo 2 Mẫu Khảo Sát Tương Tác Cao';
+            }
+        }
+
+        // ==========================================
+        // 8. CONTENT PLANNER (KANBAN + LOCALSTORAGE)
+        // ==========================================
+        function saveVideos() {
+            localStorage.setItem('yt_growth_videos', JSON.stringify(videoPlanner));
+        }
+
+        document.getElementById('add-video-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const title = document.getElementById('vid-title').value.trim();
+            if (!title) return;
+
+            videoPlanner.unshift({
+                id: Date.now(),
+                title: title,
+                type: document.getElementById('vid-type').value,
+                status: document.getElementById('vid-status').value,
+                date: new Date().toLocaleDateString('vi-VN')
+            });
+
+            saveVideos();
+            renderPlanner();
+            document.getElementById('vid-title').value = '';
+            showToast("Đã thêm video vào lịch sản xuất!", "success");
+        });
+
+        function moveVideoStatus(id, newStatus) {
+            const vid = videoPlanner.find(v => v.id === id);
+            if (vid) {
+                vid.status = newStatus;
+                saveVideos();
+                renderPlanner();
+            }
+        }
+
+        function deleteVideo(id) {
+            videoPlanner = videoPlanner.filter(v => v.id !== id);
+            saveVideos();
+            renderPlanner();
+            showToast("Đã xóa video khỏi kế hoạch.", "info");
+        }
+
+        function sendToOptimizer(title) {
+            document.getElementById('opt-topic').value = title;
+            switchTab('optimizer');
+            showToast("Đã chuyển tiêu đề sang công cụ Tối ưu SEO AI!", "info");
+        }
+
+        function renderPlanner() {
+            const cols = {
+                idea: document.getElementById('col-idea'),
+                production: document.getElementById('col-production'),
+                published: document.getElementById('col-published')
+            };
+
+            Object.values(cols).forEach(c => c.innerHTML = '');
+            const counts = { idea: 0, production: 0, published: 0 };
+
+            videoPlanner.forEach(vid => {
+                if (!cols[vid.status]) return;
+                counts[vid.status]++;
+
+                const typeBadge = vid.type === 'Shorts'
+                    ? 'bg-rose-500/15 text-rose-400 border-rose-500/20'
+                    : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/20';
+
+                const card = document.createElement('div');
+                card.className = "p-3.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition space-y-2.5";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold border ${typeBadge}">${escapeHTML(vid.type)}</span>
+                        <span class="text-[11px] text-slate-500">${escapeHTML(vid.date)}</span>
+                    </div>
+                    <p class="text-sm font-medium text-slate-200 leading-snug">${escapeHTML(vid.title)}</p>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                        <div class="flex items-center gap-1.5">
+                            ${vid.status !== 'idea' ? `<button type="button" onclick="moveVideoStatus(${vid.id}, 'idea')" title="Chuyển về Ý tưởng" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-400 text-xs"><i class="fa-solid fa-lightbulb"></i></button>` : ''}
+                            ${vid.status !== 'production' ? `<button type="button" onclick="moveVideoStatus(${vid.id}, 'production')" title="Đang sản xuất" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-sky-400 text-xs"><i class="fa-solid fa-clapperboard"></i></button>` : ''}
+                            ${vid.status !== 'published' ? `<button type="button" onclick="moveVideoStatus(${vid.id}, 'published')" title="Đánh dấu Đã đăng" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 text-xs"><i class="fa-solid fa-check"></i></button>` : ''}
+                            <button type="button" class="btn-opt-plan p-1.5 rounded-lg bg-slate-900 hover:bg-rose-600/20 text-rose-400 text-xs" title="Tối ưu SEO bằng AI"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                        </div>
+                        <button type="button" onclick="deleteVideo(${vid.id})" title="Xóa" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 text-xs"><i class="fa-regular fa-trash-can"></i></button>
+                    </div>
+                `;
+                card.querySelector('.btn-opt-plan').addEventListener('click', () => sendToOptimizer(vid.title));
+                cols[vid.status].appendChild(card);
+            });
+
+            document.getElementById('count-idea').textContent = counts.idea;
+            document.getElementById('count-production').textContent = counts.production;
+            document.getElementById('count-published').textContent = counts.published;
+            document.getElementById('planner-badge').textContent = videoPlanner.length;
+        }
+
+        // ==========================================
+        // 9. INITIALIZE APP ON LOAD
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            renderDashboard();
+            renderSyncedVideos();
+            renderPlanner();
+        });
+    </script>
+</body>
+</html>
